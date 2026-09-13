@@ -1,127 +1,68 @@
 package configs
-package configs
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}	)		c.Database.SSLMode,		c.Database.DBName,		c.Database.Password,		c.Database.User,		c.Database.Port,		c.Database.Host,		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",	return fmt.Sprintf(func (c *Config) GetDatabaseDSN() string {}	return nil	}		return fmt.Errorf("JWT secret must be set and not be the default value")	if config.Auth.JWTSecret == "" || config.Auth.JWTSecret == "your-secret-key" {	}		return fmt.Errorf("database name is required")	if config.Database.DBName == "" {	}		return fmt.Errorf("database user is required")	if config.Database.User == "" {func validateConfig(config *Config) error {}	return defaultValue	}		}			return intValue		if intValue, err := strconv.Atoi(value); err == nil {	if value := os.Getenv(key); value != "" {func getEnvAsInt(key string, defaultValue int) int {}	return defaultValue	}		return value	if value := os.Getenv(key); value != "" {func getEnv(key, defaultValue string) string {}	return config, nil	}		return nil, err	if err := validateConfig(config); err != nil {	}		},			Timeout:      getEnvAsInt("EXTERNAL_TIMEOUT", 30),			ISMETAPIKey:  getEnv("ISMET_API_KEY", ""),			ISMETAuthURL: getEnv("ISMET_AUTH_URL", ""),		External: ExternalConfig{		},			BCryptCost:    getEnvAsInt("BCRYPT_COST", 12),			RefreshExpiry: getEnvAsInt("REFRESH_EXPIRY", 7), // 7 days			TokenExpiry:   getEnvAsInt("TOKEN_EXPIRY", 60), // 1 hour			JWTSecret:     getEnv("JWT_SECRET", "your-secret-key"),		Auth: AuthConfig{		},			SSLMode:  getEnv("DB_SSL_MODE", "disable"),			DBName:   getEnv("DB_NAME", "docflow"),			Password: getEnv("DB_PASSWORD", ""),			User:     getEnv("DB_USER", "postgres"),			Port:     getEnvAsInt("DB_PORT", 5432),			Host:     getEnv("DB_HOST", "localhost"),		Database: DatabaseConfig{		},			Mode: getEnv("SERVER_MODE", "debug"),			Host: getEnv("SERVER_HOST", "localhost"),			Port: getEnvAsInt("SERVER_PORT", 8080),		Server: ServerConfig{	config := &Config{	}		fmt.Println("No .env file found, using environment variables")		// .env file is optional, don't fail if it doesn't exist	if err := godotenv.Load(); err != nil {	// Load .env file if it existsfunc LoadConfig() (*Config, error) {}	Timeout      int // in seconds	ISMETAPIKey  string	ISMETAuthURL stringtype ExternalConfig struct {}	BCryptCost    int	RefreshExpiry int // in days	TokenExpiry   int // in minutes	JWTSecret     stringtype AuthConfig struct {}	SSLMode  string	DBName   string	Password string	User     string	Port     int	Host     stringtype DatabaseConfig struct {}	Mode string // gin.DebugMode, gin.ReleaseMode, gin.TestMode	Host string	Port inttype ServerConfig struct {}	External ExternalConfig	Auth     AuthConfig	Database DatabaseConfig	Server   ServerConfigtype Config struct {)	"github.com/joho/godotenv"	"strconv"	"os"	"fmt"import (
+import (
+	"fmt"
+	"os"
+
+	"gorm.io/gorm"
+)
+
+// DB is a shared GORM handle (same pattern as szpt_new).
+// Prefer injecting *gorm.DB into repositories via constructors.
+var DB *gorm.DB
+
+// Config holds runtime settings loaded from environment variables.
+// Replace defaults with your project values — keep names stable.
+type Config struct {
+	// Database
+	DBUser     string
+	DBPassword string
+	DBHost     string
+	DBPort     string
+	DBName     string
+
+	// HTTP
+	HTTPPort string
+	HTTPMode string // gin debug | release | test
+
+	// External auth / IdP (optional in template; used by middleware)
+	AuthURL      string
+	ClientID     string
+	ClientSecret string
+
+	// Example external integrations — rename/remove per project
+	ExternalAPIURL string
+}
+
+func LoadConfig() *Config {
+	return &Config{
+		DBUser:     getEnv("DB_USERNAME", "app"),
+		DBPassword: getEnv("DB_PASSWORD", "app"),
+		DBHost:     getEnv("DB_URL", "localhost"),
+		DBPort:     getEnv("DB_PORT", "5432"),
+		DBName:     getEnv("DB_NAME", "app"),
+
+		HTTPPort: getEnv("HTTP_PORT", "8080"),
+		HTTPMode: getEnv("HTTP_MODE", "debug"),
+
+		AuthURL:      getEnv("AUTH_URL", "https://idp.example.com/auth/realms/app/protocol/openid-connect"),
+		ClientID:     getEnv("CLIENT_ID", "app_client"),
+		ClientSecret: getEnv("CLIENT_SECRET", "change-me"),
+
+		ExternalAPIURL: getEnv("EXTERNAL_API_URL", "https://api.example.com"),
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
+func (c *Config) DSN() string {
+	return fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName,
+	)
+}

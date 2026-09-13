@@ -1,0 +1,20 @@
+# bin/
+/server
+*.exe
+
+# deps
+/vendor/
+
+# env / secrets
+.env
+.env.local
+*.pem
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# go
+*.test
+coverage.out

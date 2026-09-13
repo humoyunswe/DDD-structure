@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ddd-structure:latest
+    container_name: ddd-structure-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      HTTP_PORT: ${HTTP_PORT:-8080}
+      HTTP_MODE: ${HTTP_MODE:-debug}
+      DB_URL: ${DB_URL:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-app}
+      DB_USERNAME: ${DB_USERNAME:-app}
+      DB_PASSWORD: ${DB_PASSWORD:-app}
+      AUTH_URL: ${AUTH_URL:-https://idp.example.com/auth/realms/app/protocol/openid-connect}
+      CLIENT_ID: ${CLIENT_ID:-app_client}
+      CLIENT_SECRET: ${CLIENT_SECRET:-change-me}
+      EXTERNAL_API_URL: ${EXTERNAL_API_URL:-https://api.example.com}
+    depends_on:
+      - postgres
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: ddd-structure-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
